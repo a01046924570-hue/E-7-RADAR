@@ -18,14 +18,13 @@ def load_data():
     try: return pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv")
     except: return pd.DataFrame(columns=["user_id", "type", "ticker", "buy_price", "qty"])
 
-# RSI(PSI 대용) 계산 함수
 def calculate_rsi(data, window=14):
     delta = data.diff()
     up = delta.clip(lower=0)
     down = -1 * delta.clip(upper=0)
     ema_up = up.ewm(com=window-1, adjust=False).mean()
     ema_down = down.ewm(com=window-1, adjust=False).mean()
-    rs = ema_up / ema_down
+    rs = ema_up / (ema_down + 1e-10) # 0 나누기 방지
     return 100 - (100 / (1 + rs))
 
 # 🎨 디자인 스타일
@@ -66,45 +65,41 @@ if not user_df.empty:
 
     for idx, row in user_df.iterrows():
         try:
-            # 지표 계산을 위해 충분한 데이터(15일치) 로드
             s = yf.Ticker(str(row['ticker']))
             h = s.history(period="15d", interval="1d") 
             h_live = s.history(period="2d", interval="15m")
             if h.empty or h_live.empty: continue
             
             curr = h_live['Close'].iloc[-1]
-            
-            # [진짜 지표 계산]
-            # 1. 수급(Supply): 5일 평균 거래량 대비 현재 거래량
             avg_vol = h['Volume'].tail(5).mean()
             curr_vol = h['Volume'].iloc[-1]
             supply_val = (curr_vol / avg_vol * 100) if avg_vol > 0 else 0
-            
-            # 2. PSI(RSI): 심리지수
-            rsi_series = calculate_rsi(h['Close'])
-            psi_val = rsi_series.iloc[-1]
+            psi_val = calculate_rsi(h['Close']).iloc[-1]
             
             total_buy += (float(row['buy_price']) * float(row['qty']))
             total_val += (curr * float(row['qty']))
             stocks_to_show.append({'row': row, 'curr': curr, 'hist': h_live, 'idx': idx, 'supply': supply_val, 'psi': psi_val})
         except: continue
 
-    # 상단 전광판
+    # [상단 전광판 색상 교정]
     if total_buy > 0:
         t_rate = ((total_val - total_buy) / total_buy * 100)
-        t_color = "#FF4B4B" if t_rate > 0 else "#00FF7F"
-        st.markdown(f'<div class="total-banner"><h1 style="color:{t_color}; font-size:4.5rem;">{t_rate:+.2f}%</h1><p style="color:white;">총 손익: <span style="color:#00FF7F;">${(total_val-total_buy):,.2f} | ₩{(total_val-total_buy)*EXCHANGE_RATE:,.0f}</span></p></div>', unsafe_allow_html=True)
+        # 양수면 빨강, 음수면 파랑
+        t_color = "#FF4B4B" if t_rate >= 0 else "#0066FF" 
+        st.markdown(f'<div class="total-banner"><h1 style="color:{t_color}; font-size:4.5rem;">{t_rate:+.2f}%</h1><p style="color:white;">총 손익: <span style="color:{t_color};">${(total_val-total_buy):,.2f} | ₩{(total_val-total_buy)*EXCHANGE_RATE:,.0f}</span></p></div>', unsafe_allow_html=True)
 
-    # 개별 종목 리스트
+    # [개별 종목 리스트]
     for item in stocks_to_show:
         r, curr, hist, i, supply, psi = item['row'], item['curr'], item['hist'], item['idx'], item['supply'], item['psi']
         buy_p, qty = float(r['buy_price']), float(r['qty'])
         rate = ((curr - buy_p) / buy_p * 100) if buy_p > 0 else 0
         p_usd = (curr - buy_p) * qty
         
-        # 색상 판정 로직
+        # 지표 색상
         s_color = "#00FF7F" if supply > 120 else ("#FFA500" if supply > 80 else "#888888")
         p_color = "#FF4B4B" if psi > 70 else ("#0066FF" if psi < 30 else "#FFFFFF")
+        # 내 수익률 색상 교정 (양수 빨강 / 음수 파랑)
+        profit_color = "#FF4B4B" if rate >= 0 else "#0066FF"
         
         st.markdown('<div class="stock-card">', unsafe_allow_html=True)
         c_info, c_chart = st.columns([2.8, 2.2])
@@ -114,7 +109,7 @@ if not user_df.empty:
             m1, m2, m3 = st.columns(3)
             m1.markdown(f"<p class='metric-label'>현재가 / 평단</p><p class='metric-val'>${curr:,.2f}</p><p class='sub-val'>Avg: ${buy_p:,.2f}</p>", unsafe_allow_html=True)
             m2.markdown(f"<p class='metric-label'>수급 / PSI</p><p class='metric-val' style='color:{s_color};'>{supply:.1f}%</p><p class='sub-val' style='color:{p_color};'>PSI: {psi:.1f}</p>", unsafe_allow_html=True)
-            m3.markdown(f"<p class='metric-label'>내 수익률</p><p class='metric-val' style='color:#FF4B4B;'>{rate:+.2f}%</p><p class='sub-val'>${p_usd:,.2f} / ₩{p_usd*EXCHANGE_RATE:,.0f}</p>", unsafe_allow_html=True)
+            m3.markdown(f"<p class='metric-label'>내 수익률</p><p class='metric-val' style='color:{profit_color};'>{rate:+.2f}%</p><p class='sub-val'>${p_usd:,.2f} / ₩{p_usd*EXCHANGE_RATE:,.0f}</p>", unsafe_allow_html=True)
             
         with c_chart:
             fig = go.Figure(data=[go.Scatter(x=hist.index, y=hist['Close'], line=dict(color='#0066FF', width=3))])
