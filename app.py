@@ -11,7 +11,7 @@ st_autorefresh(interval=30000, limit=None, key="refresh_v20")
 
 # --- [정보 확인] ---
 SHEET_ID = "1uoDbuvVTooPlTjSQBjybfNW3CkXCQYPdf4-bXFRkqrQ"
-API_URL = "https://script.google.com/macros/s/AKfycbwjCwOjJSTdGbfN5zrHDP6nSux1DAMMRgMURkCTSHxT9LmZPNDhMWJp8qOGtoEZJ62s/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbwBlV403lrsg_d3BQ81Y3qF6-_Jel_YdU1x8U8YrUHT9snFj_cvyn3HP0WmJz8aQfy4/exec"
 EXCHANGE_RATE = 1470 
 
 def load_data():
