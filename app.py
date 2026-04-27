@@ -10,7 +10,7 @@ st.set_page_config(page_title="E-7 RADAR V18", layout="wide")
 st_autorefresh(interval=30000, limit=None, key="refresh_v18")
 
 # --- [여기에 구글 시트 주소 붙여넣기] ---
-url = "https://docs.google.com/spreadsheets/d/1uoDbuvVTooPlTjSQBjybfNW3CkXCQYPdf4-bXFRkqrQ/edit?usp=sharing"
+url = "https://docs.google.com/spreadsheets/d/1uoDbuvVTooPlTjSQBjybfNW3CkXCQYPdf4-bXFRkqrQ"
 # --------------------------------------
 
 conn = st.connection("gsheets", type=GSheetsConnection)
