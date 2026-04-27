@@ -10,7 +10,7 @@ st_autorefresh(interval=30000, limit=None, key="refresh_v20")
 
 # --- [정보 수정] ---
 SHEET_ID = "1uoDbuvVTooPlTjSQBjybfNW3CkXCQYPdf4-bXFRkqrQ"
-API_URL = "https://script.google.com/macros/s/AKfybygyuZvtEiVQ31VZcqB4T5rXsc6-O9TsDq7BpQwl3OLsgd9hkHNOuKRhmPmM1ptKEuJ/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbwjCwOjJSTdGbfN5zrHDP6nSux1DAMMRgMURkCTSHxT9LmZPNDhMWJp8qOGtoEZJ62s/exec"
 # ------------------
 
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
