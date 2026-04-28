@@ -7,11 +7,11 @@ from streamlit_autorefresh import st_autorefresh
 
 # 1. 페이지 설정 및 자동 새로고침 (30초)
 st.set_page_config(page_title="E-7 RADAR FINAL", layout="wide")
-st_autorefresh(interval=30000, limit=None, key="refresh_v21")
+st_autorefresh(interval=30000, limit=None, key="refresh_final")
 
 # --- [설정 및 데이터 로드] ---
 SHEET_ID = "1uoDbuvVTooPlTjSQBjybfNW3CkXCQYPdf4-bXFRkqrQ"
-# 업데이트해주신 새로운 API URL 적용 완료!
+# 알려주신 새로운 API URL 적용 완료
 API_URL = "https://script.google.com/macros/s/AKfycbwBlV403lrsg_d3BQ81Y3qF6-_Jel_YdU1x8U8YrUHT9snFj_cvyn3HP0WmJz8aQfy4/exec"
 EXCHANGE_RATE = 1470 
 
@@ -46,10 +46,8 @@ with st.sidebar:
     if not user_pw: st.stop()
     
     st.divider()
-    # 핵심: 화면에 보여줄 모드 선택
     display_mode = st.radio("모드 선택", ["내 보유 주식", "관심 종목 감시"])
     
-    # 모드에 따라 등록 폼의 구성이 자동으로 바뀜
     with st.expander("➕ 타겟 신규 등록", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             if display_mode == "내 보유 주식":
@@ -62,7 +60,7 @@ with st.sidebar:
                 st.markdown("**구분: 관심종목**")
                 target_type = "관심종목"
                 t = st.text_input("티커").upper()
-                p, q = 0.0, 0.0 # 관심종목은 가격/수량 불필요
+                p, q = 0.0, 0.0 
             
             if st.form_submit_button("레이더 등록"):
                 if t:
@@ -105,15 +103,16 @@ if not filtered_df.empty:
             stocks_to_show.append({'row': row, 'curr': curr, 'change': day_change, 'hist': h_live, 'idx': idx, 'supply': supply_val, 'psi': psi_val})
         except: continue
 
-    # [보유 주식 모드일 때만 전광판 표시]
+    # 전광판 (보유 주식 모드)
     if display_mode == "내 보유 주식" and total_buy > 0:
         t_rate = ((total_val - total_buy) / total_buy * 100)
         t_color = "#FF4B4B" if t_rate >= 0 else "#0066FF" 
         st.markdown(f'<div class="total-banner"><h1 style="color:{t_color}; font-size:4.5rem;">{t_rate:+.2f}%</h1><p style="color:white;">총 손익: <span style="color:{t_color};">${(total_val-total_buy):,.2f} | ₩{(total_val-total_buy)*EXCHANGE_RATE:,.0f}</span></p></div>', unsafe_allow_html=True)
 
-    # [리스트 출력]
+    # 리스트 출력
     for item in stocks_to_show:
         r, curr, day_change, hist, i, supply, psi = item['row'], item['curr'], item['change'], item['hist'], item['idx'], item['supply'], item['psi']
+        chg_color = "#FF4B4B" if day_change >= 0 else "#0066FF"
         s_color = "#00FF7F" if supply > 120 else ("#FFA500" if supply > 80 else "#888888")
         p_color = "#FF4B4B" if psi > 70 else ("#0066FF" if psi < 30 else "#FFFFFF")
         
@@ -121,19 +120,24 @@ if not filtered_df.empty:
         c_info, c_chart = st.columns([2.8, 2.2])
         
         with c_info:
-            st.markdown(f"<h2 style='color:white; margin:0;'>🎯 {r['ticker']}</h2>", unsafe_allow_html=True)
-            m1, m2, m3 = st.columns(3)
+            # 종목명 옆 등락률(%) 추가
+            st.markdown(f"""
+                <div style='display:flex; align-items:baseline; gap:12px;'>
+                    <h2 style='color:white; margin:0;'>🎯 {r['ticker']}</h2>
+                    <span style='color:{chg_color}; font-size:1.2rem; font-weight:bold;'>{day_change:+.2f}%</span>
+                </div>
+            """, unsafe_allow_html=True)
             
+            m1, m2, m3 = st.columns(3)
             if r['type'] == "보유주식":
                 buy_p, qty = float(r['buy_price']), float(r['qty'])
                 rate = ((curr - buy_p) / buy_p * 100) if buy_p > 0 else 0
                 p_usd = (curr - buy_p) * qty
-                profit_color = "#FF4B4B" if rate >= 0 else "#0066FF" # 수익률 색상 교정
+                profit_color = "#FF4B4B" if rate >= 0 else "#0066FF"
                 m1.markdown(f"<p class='metric-label'>현재가 / 평단</p><p class='metric-val'>${curr:,.2f}</p><p class='sub-val'>Avg: ${buy_p:,.2f}</p>", unsafe_allow_html=True)
                 m2.markdown(f"<p class='metric-label'>수급 / PSI</p><p class='metric-val' style='color:{s_color};'>{supply:.1f}%</p><p class='sub-val' style='color:{p_color};'>PSI: {psi:.1f}</p>", unsafe_allow_html=True)
                 m3.markdown(f"<p class='metric-label'>내 수익률</p><p class='metric-val' style='color:{profit_color};'>{rate:+.2f}%</p><p class='sub-val'>${p_usd:,.2f} / ₩{p_usd*EXCHANGE_RATE:,.0f}</p>", unsafe_allow_html=True)
             else:
-                chg_color = "#FF4B4B" if day_change >= 0 else "#0066FF"
                 m1.markdown(f"<p class='metric-label'>현재가</p><p class='metric-val'>${curr:,.2f}</p>", unsafe_allow_html=True)
                 m2.markdown(f"<p class='metric-label'>수급 / PSI</p><p class='metric-val' style='color:{s_color};'>{supply:.1f}%</p><p class='sub-val' style='color:{p_color};'>PSI: {psi:.1f}</p>", unsafe_allow_html=True)
                 m3.markdown(f"<p class='metric-label'>전일대비</p><p class='metric-val' style='color:{chg_color};'>{day_change:+.2f}%</p>", unsafe_allow_html=True)
